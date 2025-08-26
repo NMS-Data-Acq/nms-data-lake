@@ -1,4 +1,4 @@
-# NMS Data Ingestion and Management for RaceStudio (Rough Draft)
+# NMS Data Ingestion and Management for RaceStudio
 ## Overview
 This project streamlines the ingestion and management of data from RaceStudio into
 GitHub. The main objective is to create a robust, automated system to organize and

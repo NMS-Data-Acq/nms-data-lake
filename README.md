@@ -11,11 +11,7 @@ following:
 
 By centralizing and organizing our data, we aim to improve collaboration, enable quicker access to valuable insights, and build the foundation for advanced data analysis.
 
-(EXTRA THINGS TO INCLUDE):
-Why are we using a Github repo? Challenges we
-faced/Features we implemented or hope to do so in the future. Table of
-Contents/Agenda? How to Install/Run/Use the project - in detail? Credits. Data Scources.
-Extra points. Links?
+This is just the main data lake where mostly all of our data and information shall be stored. 
 
 ## Features
 1. Automated Data Ingestion
@@ -35,15 +31,13 @@ Implemented a parsing system to process the RaceStudio CSV files:
     - RaceStudio Format Directory
     - Raw Format Directory
 
-**Future Features**
-
-1. Graphical User Interface (GUI)
+4. Graphical User Interface (GUI)
     - Designed and built a friendly user interface for querying and accessing data:
       - Allows team members to search for specific datasets
       - Simplifies pulling files from Github.
     - Focused on user experience to ensure accessibility for all team members.
 
-2. Data Integration with SharePoint via Teams
+5. Data Analysis using Grafana 
 
 ## Loading Data into GitHub
 The steps include:

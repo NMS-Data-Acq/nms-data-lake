@@ -23,18 +23,18 @@ def get_base_time(file_path):
         dt_obj = datetime.strptime(full_dt_str, "%A, %B %d, %Y %I:%M %p")
         return int(dt_obj.timestamp())
     except Exception as e:
-        print(f"⚠️ Could not parse session date/time from header: {e}. Using current time.")
+        print(f"Could not parse session date/time from header: {e}. Using current time.")
         return int(time.time())
 
 def upload_csv():
     csv_files = glob.glob('racestudio-compatible-data/*.csv')
     
     if not csv_files:
-        print("❌ No CSV files found.")
+        print("No CSV files found.")
         return
 
     for file_path in csv_files:
-        print(f"🚀 Processing: {file_path}")
+        print(f"Processing: {file_path}")
         
         # Get the actual start time from rows 7 & 8
         base_time_seconds = get_base_time(file_path)
@@ -68,9 +68,9 @@ def upload_csv():
                     headers={'Content-Type': 'text/plain'},
                     auth=(USER_ID, TOKEN)
                 )
-                print(f"✅ Uploaded {file_path} - Status: {response.status_code}")
+                print(f"Uploaded {file_path} - Status: {response.status_code}")
         except Exception as e:
-            print(f"❌ Failed to process {file_path}: {e}")
+            print(f"Failed to process {file_path}: {e}")
 
 if __name__ == "__main__":
     upload_csv()

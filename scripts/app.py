@@ -15,7 +15,7 @@ if os.path.exists('racestudio-compatible-data'):
 elif os.path.exists('../racestudio-compatible-data'):
     log_folder = '../racestudio-compatible-data'
 else:
-    st.error("❌ Telemetry folder not found.")
+    st.error("Telemetry folder not found.")
     st.stop()
 
 # --- 2. File Selection ---

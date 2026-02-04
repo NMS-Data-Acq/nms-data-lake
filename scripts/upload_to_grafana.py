@@ -11,7 +11,7 @@ TOKEN = os.getenv("GRAFANA_TOKEN")
 
 def upload_csv():
     # Find any CSV file in the data folder
-    csv_files = glob.glob('data/*.csv')
+    csv_files = glob.glob('racestudio-compatible-data/*.csv')
     
     if not csv_files:
         print("Error: No CSV files found in the data/ directory.")

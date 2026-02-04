@@ -10,35 +10,38 @@ USER_ID = os.getenv("GRAFANA_USER")
 TOKEN = os.getenv("GRAFANA_TOKEN")
 
 def upload_csv():
-    # Find any CSV file in the data folder
-    csv_files = glob.glob('racestudio-compatible-data/*.csv')
+    # 1. Use the new path you set
+    target_dir = 'racestudio-compatible-data'
+    csv_files = glob.glob(f'{target_dir}/*.csv')
     
     if not csv_files:
-        print("Error: No CSV files found in the data/ directory.")
-        # List files to help with debugging in the Action logs
-        print(f"Current directory contents: {os.listdir('.')}")
-        if os.path.exists('data'):
-            print(f"Data directory contents: {os.listdir('data')}")
+        print(f"❌ Error: No CSV files found in {target_dir}")
+        print(f"Current Working Directory: {os.getcwd()}")
+        print(f"Root contents: {os.listdir('.')}")
+        if os.path.exists(target_dir):
+            print(f"Folder contents: {os.listdir(target_dir)}")
         return
 
     for file_path in csv_files:
-        print(f"Processing: {file_path}")
+        print(f"🚀 Processing: {file_path}")
         
-        # Load data, skipping the metadata header (14 rows)
-        df = pd.read_csv(file_path, skiprows=14)
-        df = df.drop(0) # Remove the units row (s, mph, g, etc.)
+        # 2. Load data, skipping the metadata header (14 rows)
+        try:
+            df = pd.read_csv(file_path, skiprows=14)
+            df = df.drop(0) # Remove the units row
+        except Exception as e:
+            print(f"❌ Failed to parse {file_path}: {e}")
+            continue
 
-        # Use the current time as a base for the relative timestamps in the CSV
         base_time = int(time.time())
-
         lines = []
+        
         for _, row in df.iterrows():
             try:
-                # Convert relative 'Time' (seconds) to absolute nanoseconds
-                # Ensure we handle column names with quotes if present
+                # Relative time to nanoseconds
                 ts_ns = int((base_time + float(row['Time'])) * 1e9)
                 
-                # Format: measurement,tag field=val timestamp
+                # Line Protocol for Billie Jean
                 line = (
                     f"fsae_telemetry,vehicle=BillieJean "
                     f"gps_speed={float(row['GPS Speed'])},"
@@ -47,19 +50,21 @@ def upload_csv():
                     f"{ts_ns}"
                 )
                 lines.append(line)
-            except Exception as e:
-                continue # Skip rows that might have corrupted data
+            except Exception:
+                continue 
 
-        # Push to Grafana Cloud
-        payload = "\n".join(lines)
-        response = requests.post(
-            URL,
-            data=payload,
-            headers={'Content-Type': 'text/plain'},
-            auth=(USER_ID, TOKEN)
-        )
-        
-        print(f"Uploaded {file_path} - Status Code: {response.status_code}")
+        # 3. Push to Grafana Cloud
+        if lines:
+            payload = "\n".join(lines)
+            response = requests.post(
+                URL,
+                data=payload,
+                headers={'Content-Type': 'text/plain'},
+                auth=(USER_ID, TOKEN)
+            )
+            print(f"✅ Uploaded {file_path} - Status: {response.status_code}")
+        else:
+            print(f"⚠️ No valid telemetry rows in {file_path}")
 
 if __name__ == "__main__":
     upload_csv()

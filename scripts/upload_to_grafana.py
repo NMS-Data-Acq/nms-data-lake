@@ -10,45 +10,47 @@ USER_ID = os.getenv("GRAFANA_USER")
 TOKEN = os.getenv("GRAFANA_TOKEN")
 
 def upload_csv():
-    # 1. Find the CSV file dynamically
+    # Find any CSV file in the data folder
     csv_files = glob.glob('data/*.csv')
     
     if not csv_files:
-        print("No CSV files found in the data/ directory.")
+        print("Error: No CSV files found in the data/ directory.")
+        # List files to help with debugging in the Action logs
+        print(f"Current directory contents: {os.listdir('.')}")
+        if os.path.exists('data'):
+            print(f"Data directory contents: {os.listdir('data')}")
         return
 
     for file_path in csv_files:
-        print(f"Processing {file_path}...")
+        print(f"Processing: {file_path}")
         
-        # 2. Load data, skipping the AiM metadata block
-        # skiprows=14 puts us at the header names
+        # Load data, skipping the metadata header (14 rows)
         df = pd.read_csv(file_path, skiprows=14)
-        df = df.drop(0) # Drops the units row (s, mph, g, etc.)
-        
-        base_time = time.time()
+        df = df.drop(0) # Remove the units row (s, mph, g, etc.)
+
+        # Use the current time as a base for the relative timestamps in the CSV
+        base_time = int(time.time())
+
         lines = []
-        
         for _, row in df.iterrows():
             try:
-                # Convert relative 'Time' to absolute nanoseconds
+                # Convert relative 'Time' (seconds) to absolute nanoseconds
+                # Ensure we handle column names with quotes if present
                 ts_ns = int((base_time + float(row['Time'])) * 1e9)
                 
-                # Format Line Protocol
-                # We use .get() or handle spaces in column names carefully
+                # Format: measurement,tag field=val timestamp
                 line = (
                     f"fsae_telemetry,vehicle=BillieJean "
                     f"gps_speed={float(row['GPS Speed'])},"
                     f"rpm={float(row['RPM'])},"
-                    f"lat_acc={float(row['GPS LatAcc'])},"
-                    f"lon_acc={float(row['GPS LonAcc'])},"
                     f"voltage={float(row['External Voltage'])} "
                     f"{ts_ns}"
                 )
                 lines.append(line)
-            except (ValueError, KeyError) as e:
-                continue # Skip rows with bad data or missing columns
+            except Exception as e:
+                continue # Skip rows that might have corrupted data
 
-        # 3. Push to Grafana Cloud
+        # Push to Grafana Cloud
         payload = "\n".join(lines)
         response = requests.post(
             URL,
@@ -57,7 +59,7 @@ def upload_csv():
             auth=(USER_ID, TOKEN)
         )
         
-        print(f"Uploaded {file_path} - Status: {response.status_code}")
+        print(f"Uploaded {file_path} - Status Code: {response.status_code}")
 
 if __name__ == "__main__":
     upload_csv()

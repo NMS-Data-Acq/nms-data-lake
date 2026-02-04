@@ -2,22 +2,20 @@ import streamlit as st
 import pandas as pd
 import glob
 import os
-import time
+import pydeck as pdk
 from datetime import datetime
 
 # --- Page Configuration ---
-st.set_page_config(page_title="NMS Telemetry", layout="wide")
+st.set_page_config(page_title="NMS Data Portal", layout="wide")
 st.title("NMS Data Portal")
 
 # --- 1. Smart Path Detection ---
-# Streamlit Cloud runs from the repo root; local dev often runs from the script folder.
 if os.path.exists('racestudio-compatible-data'):
     log_folder = 'racestudio-compatible-data'
 elif os.path.exists('../racestudio-compatible-data'):
     log_folder = '../racestudio-compatible-data'
 else:
-    st.error("Telemetry folder 'racestudio-compatible-data' not found.")
-    st.info(f"Current Dir: {os.getcwd()} | Contents: {os.listdir('.')}")
+    st.error("❌ Telemetry folder not found.")
     st.stop()
 
 # --- 2. File Selection ---
@@ -26,66 +24,64 @@ csv_files = glob.glob(f"{log_folder}/*.csv")
 if not csv_files:
     st.warning(f"No .csv logs found in {log_folder}/")
 else:
-    # Sidebar for session picking
     file_map = {os.path.basename(f): f for f in csv_files}
     selected_filename = st.sidebar.selectbox("Select Session Log", list(file_map.keys()))
     selected_path = file_map[selected_filename]
 
-    # --- 3. Header Parsing (Date/Time) ---
-    try:
-        header_df = pd.read_csv(selected_path, nrows=10, header=None)
-        date_str = header_df.iloc[6, 1] # Row 7: Date
-        time_str = header_df.iloc[7, 1] # Row 8: Time
-        full_dt = f"{date_str} {time_str}"
-        session_date = datetime.strptime(full_dt, "%A, %B %d, %Y %I:%M %p")
-        st.sidebar.success(f"Session: {session_date.strftime('%Y-%m-%d %H:%M')}")
-    except Exception:
-        session_date = datetime.now()
-        st.sidebar.info("Using current date (Header unreadable)")
-
-    # --- 4. Load & Clean Telemetry Data ---
-    # AiM CSVs have 14 lines of metadata, then headers, then a units row
+    # --- 3. Load & Clean Telemetry Data ---
     df = pd.read_csv(selected_path, skiprows=14)
-    df = df.drop(0) # Remove units row (s, mph, g, etc.)
+    df = df.drop(0) 
     df = df.apply(pd.to_numeric, errors='coerce')
-    
-    # Create an absolute timestamp column for internal tracking if needed
-    df['Abs_Time'] = pd.to_datetime(session_date.timestamp() + df['Time'], unit='s')
+
+    # --- 4. Battery Power Calculations ---
+    df['Power_kW'] = (df['External Voltage'] * df['Current']) / 1000.0
+    df['dt'] = df['Time'].diff().fillna(0)
+    df['Energy_Ws'] = (df['External Voltage'] * df['Current']) * df['dt']
+    total_energy_wh = df['Energy_Ws'].sum() / 3600.0
 
     # --- 5. High-Level Metrics ---
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Max Speed", f"{df['GPS Speed'].max():.1f} mph")
-    col2.metric("Max RPM", f"{int(df['RPM'].max())}")
-    col3.metric("Avg Voltage", f"{df['External Voltage'].mean():.2f} V")
-    col4.metric("Max Lateral G", f"{df['GPS LatAcc'].max():.2f} g")
+    col1.metric("Max Power", f"{df['Power_kW'].max():.1f} kW")
+    col2.metric("Total Energy", f"{total_energy_wh:.2f} Wh")
+    col3.metric("Peak Current", f"{df['Current'].max():.1f} A")
+    col4.metric("Max Speed", f"{df['GPS Speed'].max():.1f} mph")
 
-    # --- 6. Telemetry Charts ---
-    st.subheader("Interactive Telemetry")
-    default_channels = ["GPS Speed", "RPM"]
-    # Filter out non-data columns for the selector
-    available_channels = [c for c in df.columns if c not in ['Time', 'Abs_Time']]
-    
-    selected_channels = st.multiselect("Select Data Channels", available_channels, default=default_channels)
-    
+    # --- 6. Power Analysis Chart ---
+    st.subheader("Powertrain Analysis")
+    st.line_chart(df, x="Time", y=["Power_kW", "Current"])
+
+    # --- 7. Channel Comparison ---
+    st.divider()
+    st.subheader("Channel Comparison")
+    available_channels = [c for c in df.columns if c not in ['Time', 'dt', 'Energy_Ws']]
+    selected_channels = st.multiselect("Select Channels", available_channels, default=["GPS Speed", "RPM"])
     if selected_channels:
         st.line_chart(df, x="Time", y=selected_channels)
 
-    # --- 7. Engineering Analysis (G-G Diagram) ---
-    st.divider()
-    left_col, right_col = st.columns(2)
-    
-    with left_col:
-        st.subheader("G-G Diagram (Traction Circle)")
-        st.scatter_chart(df, x="GPS LatAcc", y="GPS LonAcc", color="#FF4B4B")
-        st.caption("Lateral Accel (X) vs Longitudinal Accel (Y)")
+    # --- 8. Track Map with Narrow Trace ---
+    st.subheader("Track Map")
+    map_data = df[['GPS Latitude', 'GPS Longitude']].dropna()
+    map_data.columns = ['lat', 'lon']
 
-    with right_col:
-        st.subheader("GPS Track Map")
-        # Rename columns for streamlit's native map function
-        map_data = df[['GPS Latitude', 'GPS Longitude']].dropna()
-        map_data.columns = ['lat', 'lon']
-        st.map(map_data)
+    # Using pydeck for a professional, narrow trace (radius = 2 meters)
+    st.pydeck_chart(pdk.Deck(
+        map_style='mapbox://styles/mapbox/satellite-v9',
+        initial_view_state=pdk.ViewState(
+            latitude=map_data['lat'].mean(),
+            longitude=map_data['lon'].mean(),
+            zoom=16,
+            pitch=0,
+        ),
+        layers=[
+            pdk.Layer(
+                'ScatterplotLayer',
+                data=map_data,
+                get_position='[lon, lat]',
+                get_color='[255, 75, 75, 160]',
+                get_radius=2, # Small radius for narrow trace
+            ),
+        ],
+    ))
 
-    # --- 8. Raw Data Preview ---
     with st.expander("View Raw Data Table"):
         st.dataframe(df)

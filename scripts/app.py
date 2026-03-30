@@ -54,7 +54,15 @@ else:
     df['DisplaySpeed'] = df['GPS Speed']
     speed_label = "km/h"
 
-# --- 5. Powertrain & Regen Calculations ---
+# --- 5. Aero Calculations ---
+
+# --- 6. Chassis Calculations ---
+
+# --- 7. CDI Calculations ---
+
+# --- 9. Electronics Calculations ---
+
+# --- 10. Powertrain & Regen Calculations ---
 hv_volt_col = next((c for c in df.columns if 'Pack Voltage' in c), None)
 hv_curr_col = next((c for c in df.columns if 'Pack Current' in c), None)
 
@@ -73,14 +81,14 @@ if hv_volt_col and hv_curr_col:
 else:
     spent_wh = recovered_wh = regen_efficiency = net_energy_wh = 0
 
-# --- 6. Top Level Metrics ---
-col1, col2, col3, col4 = st.columns(4)
+# --- 11. Top Level Metrics (for Powertrain or for all?)--- 
+col1, col2, col3, col4 = st.columns(4) 
 col1.metric("Max Power", f"{df['Power_kW'].max() if hv_volt_col else 0:.1f} kW")
 col2.metric("Net Energy", f"{net_energy_wh:.1f} Wh")
 col3.metric("Regen Recovery", f"{regen_efficiency:.1f} %")
 col4.metric("Max Speed", f"{df['DisplaySpeed'].max():.1f} {speed_label}")
 
-# --- 7. Modular Powertrain Charts ---
+# --- 12. Modular Powertrain Charts ---
 if show_powertrain:
     st.divider()
     st.subheader("Powertrain Analytics")
@@ -94,7 +102,7 @@ if show_powertrain:
     else:
         st.error("HV Pack sensors not found in this file.")
 
-# --- 8. Modular Telemetry Channels (One Chart Per Channel) ---
+# --- 13. Modular Telemetry Channels (One Chart Per Channel) ---
 if show_telemetry:
     st.divider()
     st.subheader("Individual Channel Analysis")
@@ -110,7 +118,10 @@ if show_telemetry:
         st.write(f"**{channel}**")
         st.line_chart(df, x="Time", y=channel)
 
-# --- 9. Modular Satellite Track Map ---
+# --- 14. Suspension Calculations ---
+
+
+# --- 15. Modular Satellite Track Map ---
 if show_map:
     st.divider()
     st.subheader("Track Map")
@@ -123,6 +134,6 @@ if show_map:
             layers=[pdk.Layer('ScatterplotLayer', data=map_data, get_position='[lon, lat]', get_color='[255, 75, 75, 160]', get_radius=1.5)],
         ))
 
-# --- 10. Raw Data Preview ---
+# --- 16. Raw Data Preview ---
 with st.expander("View Raw Data"):
     st.dataframe(df)

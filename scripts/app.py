@@ -6,8 +6,8 @@ import pydeck as pdk
 import numpy as np
 
 # --- Page Configuration ---
-st.set_page_config(page_title="NMS Data Portal", layout="wide")
-st.title("NMS Data Portal")
+st.set_page_config(page_title="NMS Dashboard", layout="wide")
+st.title("NMS Dashboard")
 
 # --- 1. Smart Path Detection ---
 if os.path.exists('racestudio-compatible-data'):

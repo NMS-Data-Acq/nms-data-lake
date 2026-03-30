@@ -33,8 +33,13 @@ unit_system = st.sidebar.radio("Unit System", ["Imperial (mph)", "Metric (km/h)"
 # NEW: Toggle which modules are visible
 st.sidebar.divider()
 st.sidebar.subheader("Visible Modules")
+show_aero = st.sidebar.checkbox("Aero Analytics", value = True)
+show_chassis = st.sidebar.checkbox("Chassis Analytics", value = True)
+show_CDI = st.sidebar.checkbox("CDI Analytics", value = True)
+show_electronics = st.sidebar.checkbox("Electronics Analytics", value = True)
 show_powertrain = st.sidebar.checkbox("Powertrain Analytics", value=True)
-show_map = st.sidebar.checkbox("Track Map", value=True)
+show_suspension = st.sidebar.checkbox("Suspension Analytics", value = True)
+show_map = st.sidebar.checkbox("Track Map", value=True) 
 show_telemetry = st.sidebar.checkbox("Individual Channels", value=True)
 
 # --- 3. Data Loading ---

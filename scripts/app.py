@@ -4,6 +4,7 @@ import glob
 import os
 import pydeck as pdk
 import numpy as np
+import plotly.graph_objects as go
 
 # --- Page Configuration ---
 st.set_page_config(page_title="NMS Dashboard", layout="wide")
@@ -63,8 +64,7 @@ else:
 # --- 7. CDI Calculations ---
 # --- CDI Analytics Module ---
 if show_CDI:
-    import plotly.graph_objects as go
-
+    
     st.divider()
     st.subheader("CDI Analytics")
 

@@ -58,9 +58,32 @@ else:
 
 # --- 6. Chassis Calculations ---
 
-# --- 7. CDI Calculations ---
 
 # --- 7. CDI Calculations ---
+# Brake Temperature sensor mapping (label -> column)
+BRAKE_TEMP_SENSORS = {
+    "FL (RTD3)": "D4 RTD3 Temperat",
+    "FR (RTD2)": "D3 RTD2 Temperat",
+    "RL (RTD1)": "D2 RTD1 Temperat",
+    "RR (RTD5)": "D2 RTD5 Temperat",
+}
+BRAKE_TEMP_COLORS = {
+    "FL (RTD3)": "#EF553B",   # red
+    "FR (RTD2)": "#00CC96",   # green
+    "RL (RTD1)": "#636EFA",   # blue
+    "RR (RTD5)": "#FFA15A",   # orange
+}
+BRAKE_TEMP_SENTINEL = -999  # values at or below this are disconnected sensors
+
+# Brake Pressure sensor mapping
+BRAKE_PRESSURE_SENSORS = {
+    "Front (BrakeSensor1)": "BrakeSensor1",
+    "Rear  (BrakeSensor2)": "BrakeSensor2",
+}
+BRAKE_PRESSURE_COLORS = {
+    "Front (BrakeSensor1)": "#AB63FA",   # purple
+    "Rear  (BrakeSensor2)": "#19D3F3",   # cyan
+}
 # --- CDI Analytics Module ---
 if show_CDI:
     
@@ -186,30 +209,6 @@ if show_CDI:
     )
     st.plotly_chart(fig_spd, use_container_width=True)
 
-# Brake Temperature sensor mapping (label -> column)
-BRAKE_TEMP_SENSORS = {
-    "FL (RTD3)": "D4 RTD3 Temperat",
-    "FR (RTD2)": "D3 RTD2 Temperat",
-    "RL (RTD1)": "D2 RTD1 Temperat",
-    "RR (RTD5)": "D2 RTD5 Temperat",
-}
-BRAKE_TEMP_COLORS = {
-    "FL (RTD3)": "#EF553B",   # red
-    "FR (RTD2)": "#00CC96",   # green
-    "RL (RTD1)": "#636EFA",   # blue
-    "RR (RTD5)": "#FFA15A",   # orange
-}
-BRAKE_TEMP_SENTINEL = -999  # values at or below this are disconnected sensors
-
-# Brake Pressure sensor mapping
-BRAKE_PRESSURE_SENSORS = {
-    "Front (BrakeSensor1)": "BrakeSensor1",
-    "Rear  (BrakeSensor2)": "BrakeSensor2",
-}
-BRAKE_PRESSURE_COLORS = {
-    "Front (BrakeSensor1)": "#AB63FA",   # purple
-    "Rear  (BrakeSensor2)": "#19D3F3",   # cyan
-}
 
 # --- 9. Electronics Calculations ---
 

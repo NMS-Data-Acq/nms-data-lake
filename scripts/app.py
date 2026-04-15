@@ -34,12 +34,12 @@ unit_system = st.sidebar.radio("Unit System", ["Imperial (mph)", "Metric (km/h)"
 # NEW: Toggle which modules are visible
 st.sidebar.divider()
 st.sidebar.subheader("Visible Modules")
-show_aero = st.sidebar.checkbox("Aero Analytics", value = True)
-show_chassis = st.sidebar.checkbox("Chassis Analytics", value = True)
-show_CDI = st.sidebar.checkbox("CDI Analytics", value = True)
-show_electronics = st.sidebar.checkbox("Electronics Analytics", value = True)
-show_powertrain = st.sidebar.checkbox("Powertrain Analytics", value=True)
-show_suspension = st.sidebar.checkbox("Suspension Analytics", value = True)
+show_aero = st.sidebar.checkbox("Aero Analytics", value = False)
+show_chassis = st.sidebar.checkbox("Chassis Analytics", value = False)
+show_CDI = st.sidebar.checkbox("CDI Analytics", value = False)
+show_electronics = st.sidebar.checkbox("Electronics Analytics", value = False)
+show_powertrain = st.sidebar.checkbox("Powertrain Analytics", value=False)
+show_suspension = st.sidebar.checkbox("Suspension Analytics", value = False)
 show_map = st.sidebar.checkbox("Track Map", value=True) 
 show_telemetry = st.sidebar.checkbox("Individual Channels", value=True)
 
@@ -217,17 +217,18 @@ if hv_volt_col and hv_curr_col:
 else:
     spent_wh = recovered_wh = regen_efficiency = net_energy_wh = 0
 
-# --- 11. Top Level Metrics (for Powertrain or for all?)--- 
-col1, col2, col3, col4 = st.columns(4) 
-col1.metric("Max Power", f"{df['Power_kW'].max() if hv_volt_col else 0:.1f} kW")
-col2.metric("Net Energy", f"{net_energy_wh:.1f} Wh")
-col3.metric("Regen Recovery", f"{regen_efficiency:.1f} %")
-col4.metric("Max Speed", f"{df['DisplaySpeed'].max():.1f} {speed_label}")
-
 # --- 12. Modular Powertrain Charts ---
 if show_powertrain:
     st.divider()
     st.subheader("Powertrain Analytics")
+
+    # Top Metrics for Powertrain
+    col1, col2, col3, col4 = st.columns(4) 
+    col1.metric("Max Power", f"{df['Power_kW'].max() if hv_volt_col else 0:.1f} kW")
+    col2.metric("Net Energy", f"{net_energy_wh:.1f} Wh")
+    col3.metric("Regen Recovery", f"{regen_efficiency:.1f} %")
+    col4.metric("Max Speed", f"{df['DisplaySpeed'].max():.1f} {speed_label}")
+
     if hv_volt_col and hv_curr_col:
         # Separate charts so they aren't overlaid/stacked on one axis
         st.write("**Battery Power (kW)**")

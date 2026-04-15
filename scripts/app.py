@@ -4,7 +4,7 @@ import glob
 import os
 import pydeck as pdk
 import numpy as np
-import plotly.graph_objects as go 
+import altair as alt
 
 # --- Page Configuration ---
 st.set_page_config(page_title="NMS Dashboard", layout="wide")
@@ -86,8 +86,9 @@ BRAKE_PRESSURE_COLORS = {
     "Rear  (BrakeSensor2)": "#19D3F3",   # cyan
 }
 # --- CDI Analytics Module ---
+# --- CDI Analytics Module ---
 if show_CDI:
-    
+
     st.divider()
     st.subheader("CDI Analytics")
 
@@ -105,7 +106,7 @@ if show_CDI:
     )
     cdi_df = df[(df['Time'] >= t_start) & (df['Time'] <= t_end)].copy()
 
-    # ── Panel 1: Brake Temperatures ──────────────────────────────────────
+    # ── Panel 1: Brake Temperatures ───────────────────────────────────────
     st.markdown("#### 🌡️ Brake Temperatures")
 
     temp_view = st.selectbox(
@@ -114,46 +115,43 @@ if show_CDI:
         key="cdi_temp_view"
     )
 
-    fig_temp = go.Figure()
-
     sensors_to_plot = (
         BRAKE_TEMP_SENSORS.items()
         if temp_view == "All Sensors (Overlaid)"
         else [(temp_view, BRAKE_TEMP_SENSORS[temp_view])]
     )
 
+    # Build a long-format dataframe for Altair
+    temp_frames = []
     any_temp_data = False
     for label, col in sensors_to_plot:
-        series = cdi_df[col].copy()
-        # Mask sentinel/disconnected values
-        series[series <= BRAKE_TEMP_SENTINEL] = None
-        if series.notna().any():
+        series = cdi_df[['Time', col]].copy()
+        series[col] = series[col].where(series[col] > BRAKE_TEMP_SENTINEL)
+        if series[col].notna().any():
             any_temp_data = True
-            fig_temp.add_trace(go.Scatter(
-                x=cdi_df['Time'],
-                y=series,
-                mode='lines',
-                name=label,
-                line=dict(color=BRAKE_TEMP_COLORS[label], width=2),
-                hovertemplate=f"<b>{label}</b><br>Time: %{{x:.2f}} s<br>Temp: %{{y:.1f}} °C<extra></extra>"
-            ))
+            series = series.rename(columns={col: 'Temperature'})
+            series['Sensor'] = label
+            temp_frames.append(series[['Time', 'Temperature', 'Sensor']])
         else:
             st.warning(f"⚠️ {label}: No valid data (sensor may be disconnected).")
 
     if any_temp_data:
-        fig_temp.update_layout(
-            xaxis_title="Time (s)",
-            yaxis_title="Temperature (°C)",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            height=350,
-            margin=dict(t=40, b=40),
-            hovermode="x unified"
+        temp_long = pd.concat(temp_frames, ignore_index=True)
+        color_scale = alt.Scale(
+            domain=list(BRAKE_TEMP_COLORS.keys()),
+            range=list(BRAKE_TEMP_COLORS.values())
         )
-        st.plotly_chart(fig_temp, use_container_width=True)
+        chart_temp = alt.Chart(temp_long).mark_line().encode(
+            x=alt.X('Time:Q', title='Time (s)'),
+            y=alt.Y('Temperature:Q', title='Temperature (°C)'),
+            color=alt.Color('Sensor:N', scale=color_scale),
+            tooltip=['Sensor:N', alt.Tooltip('Time:Q', format='.2f'), alt.Tooltip('Temperature:Q', format='.1f')]
+        ).properties(height=350).interactive()
+        st.altair_chart(chart_temp, use_container_width=True)
     else:
         st.error("No brake temperature data available in this session.")
 
-    # ── Panel 2: Brake Pressures ─────────────────────────────────────────
+    # ── Panel 2: Brake Pressures ──────────────────────────────────────────
     st.markdown("#### 🔴 Brake Pressures")
 
     pressure_view = st.selectbox(
@@ -162,54 +160,41 @@ if show_CDI:
         key="cdi_pressure_view"
     )
 
-    fig_pres = go.Figure()
-
     sensors_to_plot_p = (
         BRAKE_PRESSURE_SENSORS.items()
         if pressure_view == "Both (Overlaid)"
         else [(pressure_view, BRAKE_PRESSURE_SENSORS[pressure_view])]
     )
 
+    pres_frames = []
     for label, col in sensors_to_plot_p:
-        fig_pres.add_trace(go.Scatter(
-            x=cdi_df['Time'],
-            y=cdi_df[col],
-            mode='lines',
-            name=label,
-            line=dict(color=BRAKE_PRESSURE_COLORS[label], width=2),
-            hovertemplate=f"<b>{label}</b><br>Time: %{{x:.2f}} s<br>Pressure: %{{y:.3f}}<extra></extra>"
-        ))
+        series = cdi_df[['Time', col]].copy()
+        series = series.rename(columns={col: 'Pressure'})
+        series['Sensor'] = label
+        pres_frames.append(series[['Time', 'Pressure', 'Sensor']])
 
-    fig_pres.update_layout(
-        xaxis_title="Time (s)",
-        yaxis_title="Brake Pressure",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        height=350,
-        margin=dict(t=40, b=40),
-        hovermode="x unified"
+    pres_long = pd.concat(pres_frames, ignore_index=True)
+    color_scale_p = alt.Scale(
+        domain=list(BRAKE_PRESSURE_COLORS.keys()),
+        range=list(BRAKE_PRESSURE_COLORS.values())
     )
-    st.plotly_chart(fig_pres, use_container_width=True)
+    chart_pres = alt.Chart(pres_long).mark_line().encode(
+        x=alt.X('Time:Q', title='Time (s)'),
+        y=alt.Y('Pressure:Q', title='Brake Pressure'),
+        color=alt.Color('Sensor:N', scale=color_scale_p),
+        tooltip=['Sensor:N', alt.Tooltip('Time:Q', format='.2f'), alt.Tooltip('Pressure:Q', format='.3f')]
+    ).properties(height=350).interactive()
+    st.altair_chart(chart_pres, use_container_width=True)
 
     # ── Car Speed (reference) ─────────────────────────────────────────────
     st.markdown(f"#### 🚗 Car Speed ({speed_label})")
-    fig_spd = go.Figure()
-    fig_spd.add_trace(go.Scatter(
-        x=cdi_df['Time'],
-        y=cdi_df['DisplaySpeed'],
-        mode='lines',
-        name=f"Speed ({speed_label})",
-        line=dict(color="#FFD700", width=2),
-        hovertemplate=f"Time: %{{x:.2f}} s<br>Speed: %{{y:.1f}} {speed_label}<extra></extra>"
-    ))
-    fig_spd.update_layout(
-        xaxis_title="Time (s)",
-        yaxis_title=f"Speed ({speed_label})",
-        height=300,
-        margin=dict(t=40, b=40),
-        hovermode="x unified"
-    )
-    st.plotly_chart(fig_spd, use_container_width=True)
-
+    spd_df = cdi_df[['Time', 'DisplaySpeed']].copy().rename(columns={'DisplaySpeed': 'Speed'})
+    chart_spd = alt.Chart(spd_df).mark_line(color='#FFD700').encode(
+        x=alt.X('Time:Q', title='Time (s)'),
+        y=alt.Y('Speed:Q', title=f'Speed ({speed_label})'),
+        tooltip=[alt.Tooltip('Time:Q', format='.2f'), alt.Tooltip('Speed:Q', format='.1f')]
+    ).properties(height=300).interactive()
+    st.altair_chart(chart_spd, use_container_width=True)
 
 # --- 9. Electronics Calculations ---
 

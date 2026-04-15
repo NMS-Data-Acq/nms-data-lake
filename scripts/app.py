@@ -60,6 +60,158 @@ else:
 
 # --- 7. CDI Calculations ---
 
+# --- 7. CDI Calculations ---
+# --- CDI Analytics Module ---
+if show_CDI:
+    import plotly.graph_objects as go
+
+    st.divider()
+    st.subheader("CDI Analytics")
+
+    # --- Time Window Slider ---
+    t_min = float(df['Time'].min())
+    t_max = float(df['Time'].max())
+    t_start, t_end = st.slider(
+        "Time Window (seconds)",
+        min_value=t_min,
+        max_value=t_max,
+        value=(t_min, t_max),
+        step=0.05,
+        format="%.1f s",
+        key="cdi_time_slider"
+    )
+    cdi_df = df[(df['Time'] >= t_start) & (df['Time'] <= t_end)].copy()
+
+    # ── Panel 1: Brake Temperatures ──────────────────────────────────────
+    st.markdown("#### 🌡️ Brake Temperatures")
+
+    temp_view = st.selectbox(
+        "View",
+        ["All Sensors (Overlaid)", "FL (RTD3)", "FR (RTD2)", "RL (RTD1)", "RR (RTD5)"],
+        key="cdi_temp_view"
+    )
+
+    fig_temp = go.Figure()
+
+    sensors_to_plot = (
+        BRAKE_TEMP_SENSORS.items()
+        if temp_view == "All Sensors (Overlaid)"
+        else [(temp_view, BRAKE_TEMP_SENSORS[temp_view])]
+    )
+
+    any_temp_data = False
+    for label, col in sensors_to_plot:
+        series = cdi_df[col].copy()
+        # Mask sentinel/disconnected values
+        series[series <= BRAKE_TEMP_SENTINEL] = None
+        if series.notna().any():
+            any_temp_data = True
+            fig_temp.add_trace(go.Scatter(
+                x=cdi_df['Time'],
+                y=series,
+                mode='lines',
+                name=label,
+                line=dict(color=BRAKE_TEMP_COLORS[label], width=2),
+                hovertemplate=f"<b>{label}</b><br>Time: %{{x:.2f}} s<br>Temp: %{{y:.1f}} °C<extra></extra>"
+            ))
+        else:
+            st.warning(f"⚠️ {label}: No valid data (sensor may be disconnected).")
+
+    if any_temp_data:
+        fig_temp.update_layout(
+            xaxis_title="Time (s)",
+            yaxis_title="Temperature (°C)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            height=350,
+            margin=dict(t=40, b=40),
+            hovermode="x unified"
+        )
+        st.plotly_chart(fig_temp, use_container_width=True)
+    else:
+        st.error("No brake temperature data available in this session.")
+
+    # ── Panel 2: Brake Pressures ─────────────────────────────────────────
+    st.markdown("#### 🔴 Brake Pressures")
+
+    pressure_view = st.selectbox(
+        "View",
+        ["Both (Overlaid)", "Front (BrakeSensor1)", "Rear  (BrakeSensor2)"],
+        key="cdi_pressure_view"
+    )
+
+    fig_pres = go.Figure()
+
+    sensors_to_plot_p = (
+        BRAKE_PRESSURE_SENSORS.items()
+        if pressure_view == "Both (Overlaid)"
+        else [(pressure_view, BRAKE_PRESSURE_SENSORS[pressure_view])]
+    )
+
+    for label, col in sensors_to_plot_p:
+        fig_pres.add_trace(go.Scatter(
+            x=cdi_df['Time'],
+            y=cdi_df[col],
+            mode='lines',
+            name=label,
+            line=dict(color=BRAKE_PRESSURE_COLORS[label], width=2),
+            hovertemplate=f"<b>{label}</b><br>Time: %{{x:.2f}} s<br>Pressure: %{{y:.3f}}<extra></extra>"
+        ))
+
+    fig_pres.update_layout(
+        xaxis_title="Time (s)",
+        yaxis_title="Brake Pressure",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        height=350,
+        margin=dict(t=40, b=40),
+        hovermode="x unified"
+    )
+    st.plotly_chart(fig_pres, use_container_width=True)
+
+    # ── Car Speed (reference) ─────────────────────────────────────────────
+    st.markdown(f"#### 🚗 Car Speed ({speed_label})")
+    fig_spd = go.Figure()
+    fig_spd.add_trace(go.Scatter(
+        x=cdi_df['Time'],
+        y=cdi_df['DisplaySpeed'],
+        mode='lines',
+        name=f"Speed ({speed_label})",
+        line=dict(color="#FFD700", width=2),
+        hovertemplate=f"Time: %{{x:.2f}} s<br>Speed: %{{y:.1f}} {speed_label}<extra></extra>"
+    ))
+    fig_spd.update_layout(
+        xaxis_title="Time (s)",
+        yaxis_title=f"Speed ({speed_label})",
+        height=300,
+        margin=dict(t=40, b=40),
+        hovermode="x unified"
+    )
+    st.plotly_chart(fig_spd, use_container_width=True)
+
+# Brake Temperature sensor mapping (label -> column)
+BRAKE_TEMP_SENSORS = {
+    "FL (RTD3)": "D4 RTD3 Temperat",
+    "FR (RTD2)": "D3 RTD2 Temperat",
+    "RL (RTD1)": "D2 RTD1 Temperat",
+    "RR (RTD5)": "D2 RTD5 Temperat",
+}
+BRAKE_TEMP_COLORS = {
+    "FL (RTD3)": "#EF553B",   # red
+    "FR (RTD2)": "#00CC96",   # green
+    "RL (RTD1)": "#636EFA",   # blue
+    "RR (RTD5)": "#FFA15A",   # orange
+}
+BRAKE_TEMP_SENTINEL = -999  # values at or below this are disconnected sensors
+
+# Brake Pressure sensor mapping
+BRAKE_PRESSURE_SENSORS = {
+    "Front (BrakeSensor1)": "BrakeSensor1",
+    "Rear  (BrakeSensor2)": "BrakeSensor2",
+}
+BRAKE_PRESSURE_COLORS = {
+    "Front (BrakeSensor1)": "#AB63FA",   # purple
+    "Rear  (BrakeSensor2)": "#19D3F3",   # cyan
+}
+
 # --- 9. Electronics Calculations ---
 
 # --- 10. Powertrain & Regen Calculations ---

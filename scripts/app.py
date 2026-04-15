@@ -107,19 +107,19 @@ if show_CDI:
     cdi_df = df[(df['Time'] >= t_start) & (df['Time'] <= t_end)].copy()
 
     # ── Panel 1: Brake Temperatures ───────────────────────────────────────
-    st.markdown("#### 🌡️ Brake Temperatures")
+    st.markdown("#### Brake Temperatures")
 
-    temp_view = st.selectbox(
-        "View",
-        ["All Sensors (Overlaid)", "FL (RTD3)", "FR (RTD2)", "RL (RTD1)", "RR (RTD5)"],
+    temp_view = st.multiselect(
+        "Select Sensors",
+        options=list(BRAKE_TEMP_SENSORS.keys()),
+        default=list(BRAKE_TEMP_SENSORS.keys()),
         key="cdi_temp_view"
     )
 
-    sensors_to_plot = (
-        BRAKE_TEMP_SENSORS.items()
-        if temp_view == "All Sensors (Overlaid)"
-        else [(temp_view, BRAKE_TEMP_SENSORS[temp_view])]
-    )
+    sensors_to_plot = [(label, BRAKE_TEMP_SENSORS[label]) for label in temp_view]
+    
+    if not sensors_to_plot:
+        st.info("Select at least one sensor to display.")
 
     # Build a long-format dataframe for Altair
     temp_frames = []
@@ -152,19 +152,19 @@ if show_CDI:
         st.error("No brake temperature data available in this session.")
 
     # ── Panel 2: Brake Pressures ──────────────────────────────────────────
-    st.markdown("#### 🔴 Brake Pressures")
+    st.markdown("#### Brake Pressures")
 
-    pressure_view = st.selectbox(
-        "View",
-        ["Both (Overlaid)", "Front (BrakeSensor1)", "Rear  (BrakeSensor2)"],
+    pressure_view = st.multiselect(
+        "Select Sensors",
+        options=list(BRAKE_PRESSURE_SENSORS.keys()),
+        default=list(BRAKE_PRESSURE_SENSORS.keys()),
         key="cdi_pressure_view"
     )
-
-    sensors_to_plot_p = (
-        BRAKE_PRESSURE_SENSORS.items()
-        if pressure_view == "Both (Overlaid)"
-        else [(pressure_view, BRAKE_PRESSURE_SENSORS[pressure_view])]
-    )
+    
+    sensors_to_plot_p = [(label, BRAKE_PRESSURE_SENSORS[label]) for label in pressure_view]
+    
+    if not sensors_to_plot_p:
+        st.info("Select at least one sensor to display.")
 
     pres_frames = []
     for label, col in sensors_to_plot_p:
@@ -187,7 +187,7 @@ if show_CDI:
     st.altair_chart(chart_pres, use_container_width=True)
 
     # ── Car Speed (reference) ─────────────────────────────────────────────
-    st.markdown(f"#### 🚗 Car Speed ({speed_label})")
+    st.markdown(f"#### Car Speed ({speed_label})")
     spd_df = cdi_df[['Time', 'DisplaySpeed']].copy().rename(columns={'DisplaySpeed': 'Speed'})
     chart_spd = alt.Chart(spd_df).mark_line(color='#FFD700').encode(
         x=alt.X('Time:Q', title='Time (s)'),

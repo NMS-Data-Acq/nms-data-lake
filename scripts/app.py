@@ -85,7 +85,7 @@ BRAKE_PRESSURE_COLORS = {
     "Front (BrakeSensor1)": "#AB63FA",   # purple
     "Rear  (BrakeSensor2)": "#19D3F3",   # cyan
 }
-# --- CDI Analytics Module ---
+
 # --- CDI Analytics Module ---
 if show_CDI:
 
@@ -196,9 +196,65 @@ if show_CDI:
     ).properties(height=300).interactive()
     st.altair_chart(chart_spd, use_container_width=True)
 
-# --- 9. Electronics Calculations ---
+# --- 8. Electronics Calculations ---
+APPS_SENSORS = {
+    "APPS1": "APPS1",
+    "APPS2": "APPS2",
+}
+APPS_COLORS = {
+    "APPS1": "#EF553B",  # red
+    "APPS2": "#636EFA",  # blue
+}
 
-# --- 10. Powertrain & Regen Calculations ---
+# --- Electronics Analytics Module ---
+if show_electronics:
+    import altair as alt
+
+    st.divider()
+    st.subheader("Electronics Analytics")
+
+    st.markdown("#### 🎮 Accelerator Pedal Position (APPS)")
+
+    apps_view = st.multiselect(
+        "Select Sensors",
+        options=list(APPS_SENSORS.keys()),
+        default=list(APPS_SENSORS.keys()),
+        key="electronics_apps_view"
+    )
+
+    if not apps_view:
+        st.info("Select at least one sensor to display.")
+    else:
+        apps_frames = []
+        for label in apps_view:
+            col = APPS_SENSORS[label]
+            series = df[['Time', col]].copy()
+            series = series.rename(columns={col: 'Position'})
+            series['Sensor'] = label
+            apps_frames.append(series[['Time', 'Position', 'Sensor']])
+
+        apps_long = pd.concat(apps_frames, ignore_index=True)
+
+        color_scale = alt.Scale(
+            domain=list(APPS_COLORS.keys()),
+            range=list(APPS_COLORS.values())
+        )
+
+        chart_apps = alt.Chart(apps_long).mark_line().encode(
+            x=alt.X('Time:Q', title='Time (s)'),
+            y=alt.Y('Position:Q', title='Pedal Position'),
+            color=alt.Color('Sensor:N', scale=color_scale),
+            tooltip=[
+                'Sensor:N',
+                alt.Tooltip('Time:Q', format='.2f'),
+                alt.Tooltip('Position:Q', format='.3f')
+            ]
+        ).properties(height=350).interactive()
+
+        st.altair_chart(chart_apps, use_container_width=True)
+
+
+# --- 9. Powertrain & Regen Calculations ---
 hv_volt_col = next((c for c in df.columns if 'Pack Voltage' in c), None)
 hv_curr_col = next((c for c in df.columns if 'Pack Current' in c), None)
 
@@ -217,7 +273,7 @@ if hv_volt_col and hv_curr_col:
 else:
     spent_wh = recovered_wh = regen_efficiency = net_energy_wh = 0
 
-# --- 12. Modular Powertrain Charts ---
+# --- 10. Modular Powertrain Charts ---
 if show_powertrain:
     st.divider()
     st.subheader("Powertrain Analytics")
@@ -239,7 +295,7 @@ if show_powertrain:
     else:
         st.error("HV Pack sensors not found in this file.")
 
-# --- 13. Modular Telemetry Channels (One Chart Per Channel) ---
+# --- 11. Modular Telemetry Channels (One Chart Per Channel) ---
 if show_telemetry:
     st.divider()
     st.subheader("Individual Channel Analysis")
@@ -255,10 +311,10 @@ if show_telemetry:
         st.write(f"**{channel}**")
         st.line_chart(df, x="Time", y=channel)
 
-# --- 14. Suspension Calculations ---
+# --- 12. Suspension Calculations ---
 
 
-# --- 15. Modular Satellite Track Map ---
+# --- 13. Modular Satellite Track Map ---
 if show_map:
     st.divider()
     st.subheader("Track Map")
@@ -271,6 +327,6 @@ if show_map:
             layers=[pdk.Layer('ScatterplotLayer', data=map_data, get_position='[lon, lat]', get_color='[255, 75, 75, 160]', get_radius=1.5)],
         ))
 
-# --- 16. Raw Data Preview ---
+# --- 14. Raw Data Preview ---
 with st.expander("View Raw Data"):
     st.dataframe(df)

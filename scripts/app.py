@@ -213,6 +213,20 @@ if show_electronics:
     st.divider()
     st.subheader("Electronics Analytics")
 
+    # --- Time Window Slider ---
+    t_min_e = float(df['Time'].min())
+    t_max_e = float(df['Time'].max())
+    t_start_e, t_end_e = st.slider(
+        "Time Window (seconds)",
+        min_value=t_min_e,
+        max_value=t_max_e,
+        value=(t_min_e, t_max_e),
+        step=0.05,
+        format="%.1f s",
+        key="electronics_time_slider"
+    )
+    elec_df = df[(df['Time'] >= t_start_e) & (df['Time'] <= t_end_e)].copy()
+
     st.markdown("#### Accelerator Pedal Position (APPS)")
 
     apps_view = st.multiselect(
@@ -228,7 +242,7 @@ if show_electronics:
         apps_frames = []
         for label in apps_view:
             col = APPS_SENSORS[label]
-            series = df[['Time', col]].copy()
+            series = elec_df[['Time', col]].copy()
             series = series.rename(columns={col: 'Position'})
             series['Sensor'] = label
             apps_frames.append(series[['Time', 'Position', 'Sensor']])
@@ -252,7 +266,6 @@ if show_electronics:
         ).properties(height=350).interactive()
 
         st.altair_chart(chart_apps, use_container_width=True)
-
 
 # --- 9. Powertrain & Regen Calculations ---
 hv_volt_col = next((c for c in df.columns if 'Pack Voltage' in c), None)

@@ -213,7 +213,7 @@ if show_electronics:
     st.divider()
     st.subheader("Electronics Analytics")
 
-    st.markdown("#### 🎮 Accelerator Pedal Position (APPS)")
+    st.markdown("#### Accelerator Pedal Position (APPS)")
 
     apps_view = st.multiselect(
         "Select Sensors",

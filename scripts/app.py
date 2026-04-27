@@ -196,6 +196,30 @@ if show_CDI:
     ).properties(height=300).interactive()
     st.altair_chart(chart_spd, use_container_width=True)
 
+# ── Raw Data Preview (CDI-relevant columns only) ──────────────────────
+    with st.expander("View Raw CDI Data"):
+        cdi_raw_cols = ['Time']
+
+        # Add brake temp columns for any selected sensors
+        for label, col in BRAKE_TEMP_SENSORS.items():
+            if col in cdi_df.columns:
+                cdi_raw_cols.append(col)
+
+        # Add brake pressure columns
+        for label, col in BRAKE_PRESSURE_SENSORS.items():
+            if col in cdi_df.columns:
+                cdi_raw_cols.append(col)
+
+        # Add display speed
+        if 'DisplaySpeed' in cdi_df.columns:
+            cdi_raw_cols.append('DisplaySpeed')
+
+        # Deduplicate while preserving order
+        seen = set()
+        cdi_raw_cols = [c for c in cdi_raw_cols if not (c in seen or seen.add(c))]
+
+        st.dataframe(cdi_df[cdi_raw_cols].reset_index(drop=True))
+
 # --- 8. Electronics Calculations ---
 APPS_SENSORS = {
     "APPS1": "APPS1",
